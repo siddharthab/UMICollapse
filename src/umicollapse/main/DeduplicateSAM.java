@@ -521,13 +521,14 @@ public class DeduplicateSAM{
     private static class Writer{
         private boolean paired;
         private SAMFileWriter writer;
-        private File in;
+        private SamReader reader;
+
         private String ref = null;
         private HashSet<ReversedRead> set;
 
         public Writer(File in, File out, SamReader r, boolean paired){
             if(paired){
-                this.in = in;
+                this.reader = SamReaderFactory.makeDefault().validationStringency(ValidationStringency.SILENT).open(in);
                 this.set = new HashSet<ReversedRead>();
             }
 
@@ -560,8 +561,14 @@ public class DeduplicateSAM{
         }
 
         public void close(){
-            if(paired)
+            if(paired) {
                 writeReversed(true);
+                try{
+                    reader.close();
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
 
             writer.close();
         }
@@ -570,7 +577,6 @@ public class DeduplicateSAM{
             if(ref == null)
                 return;
 
-            SamReader reader = SamReaderFactory.makeDefault().validationStringency(ValidationStringency.SILENT).open(in);
             SAMRecordIterator iter = null;
 
             if(fullPass)
@@ -598,11 +604,8 @@ public class DeduplicateSAM{
                 }
             }
 
-            try{
-                reader.close();
-            }catch(Exception e){
-                e.printStackTrace();
-            }
+            iter.close();
+
         }
     }
 
